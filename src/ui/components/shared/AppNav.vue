@@ -57,7 +57,7 @@ onUnmounted(() => {
         
         <!-- Theme Toggle -->
         <button 
-          @click="toggleTheme" 
+          @click="toggle" 
           class="theme-toggle" 
           :class="{ 'theme-toggle--scrolled': scrolled }"
           aria-label="Alternar tema"

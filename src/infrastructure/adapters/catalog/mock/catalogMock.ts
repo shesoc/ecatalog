@@ -32,15 +32,15 @@ export const mockCompanies: CompanyAPI[] = [
     name: 'TechNova Soluciones',
     description: 'Innovación y calidad en tecnología corporativa desde 2010.',
     logo_url: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=200&h=200&fit=crop&crop=center',
-    banner_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=480&fit=crop&crop=center',
+    banner_url: 'https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=2000&q=80&auto=format&fit=crop',
     whatsapp_number: '5491100000001',
     whatsapp_enabled: true,
     whatsapp_template: 'Hola TechNova! Quiero consultar sobre: {product}. Gracias!',
     email: 'info@technova.com',
     address: 'Av. Corrientes 1500, CABA',
     page_colors: {
-      primary: '#1d4ed8',
-      secondary: '#3b82f6',
+      primary: '#7b5201ff',
+      secondary: '#8c7e6bff',
     },
     social_links: [
       { platform: 'instagram', url: 'https://instagram.com/technova' },

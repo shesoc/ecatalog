@@ -3,8 +3,7 @@ import { onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCatalog } from '@/ui/composables/useCatalog';
 import { useTheme } from '@/ui/composables/useTheme';
-import AppNav from '@/ui/components/shared/AppNav.vue';
-import CompanyHeader from '@/ui/components/company/CompanyHeader.vue';
+import ModernHero from '@/ui/components/company/ModernHero.vue';
 import CatalogFooter from '@/ui/components/company/CatalogFooter.vue';
 import ProductGrid from '@/ui/components/product/ProductGrid.vue';
 import type { Product } from '@/domain/models/Product';
@@ -35,20 +34,11 @@ function handleSelectProduct(product: Product): void {
 
 <template>
   <div class="catalog-root">
-    <AppNav :company="company" />
-
     <main class="catalog-main">
-      <!-- Skeleton -->
+      <ModernHero :company="company" :is-loading="loading" />
+
+      <!-- Skeleton for bottom section -->
       <div v-if="loading" class="skeleton-page">
-        <div class="skeleton-hero">
-          <div class="skeleton-hero-text">
-            <div class="skeleton skeleton--title-lg" />
-            <div class="skeleton skeleton--desc" />
-            <div class="skeleton skeleton--desc short" />
-            <div class="skeleton skeleton--btn-row" />
-          </div>
-          <div class="skeleton skeleton--hero-img" />
-        </div>
         <div class="skeleton-catalog-section">
           <div class="skeleton skeleton--title" />
           <div class="skeleton-tabs">
@@ -69,7 +59,6 @@ function handleSelectProduct(product: Product): void {
 
       <!-- Content -->
       <template v-else-if="company">
-        <CompanyHeader :company="company" />
         <ProductGrid :products="products" @select-product="handleSelectProduct" />
         <CatalogFooter :company="company" />
       </template>
@@ -102,50 +91,6 @@ function handleSelectProduct(product: Product): void {
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
-}
-
-.skeleton-hero {
-  display: flex;
-  gap: 2rem;
-  padding: 3rem 1.5rem 2rem;
-  max-width: var(--content-max);
-  margin: 0 auto;
-}
-
-.skeleton-hero-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.skeleton--title-lg {
-  height: 40px;
-  width: 80%;
-  border-radius: var(--radius-sm);
-}
-
-.skeleton--desc {
-  height: 14px;
-  width: 100%;
-}
-
-.skeleton--desc.short {
-  width: 60%;
-}
-
-.skeleton--btn-row {
-  height: 44px;
-  width: 250px;
-  border-radius: var(--radius-full);
-  margin-top: 0.5rem;
-}
-
-.skeleton--hero-img {
-  width: 40%;
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius-xl);
-  flex-shrink: 0;
 }
 
 .skeleton-catalog-section {
@@ -215,12 +160,15 @@ function handleSelectProduct(product: Product): void {
 }
 
 /* Responsive skeleton */
-@media (max-width: 639px) {
-  .skeleton-hero {
-    flex-direction: column;
+@media (max-width: 768px) {
+  .skeleton-catalog-section {
+    padding: 1rem;
   }
-  .skeleton--hero-img {
-    width: 100%;
+  .skeleton-tabs {
+    flex-wrap: wrap;
+  }
+  .skeleton-grid {
+    grid-template-columns: 1fr;
   }
 }
 
