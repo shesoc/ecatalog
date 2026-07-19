@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import type { PropType } from 'vue';
 import type { CompanyAPI } from '../../infrastructure/adapters/catalog/dto/CompanyAPI';
 import BlurText from '../shared/BlurText.vue';
+import { useDarkMode } from '../../composables/useDarkMode';
 
 const props = defineProps({
   company: {
@@ -19,7 +20,8 @@ const props = defineProps({
   }
 });
 
-const isMenuOpen = ref(false);
+const { isDark, toggle } = useDarkMode();
+
 const scrollY = ref(0);
 const hasExitedHero = ref(false);
 const introState = ref<'loading' | 'expanding' | 'ready'>('loading');
@@ -47,18 +49,8 @@ watch(() => props.isLoading, (loading) => {
   }
 }, { immediate: true });
 
-function toggleMenu() {
-  if (introState.value !== 'ready') return;
-  isMenuOpen.value = !isMenuOpen.value;
-  if (isMenuOpen.value) {
-    document.body.style.overflow = 'hidden';
-  } else {
-    document.body.style.overflow = '';
-  }
-}
-
 function handleScroll() {
-  if (isMenuOpen.value || introState.value !== 'ready') return; 
+  if (introState.value !== 'ready') return; 
   scrollY.value = window.scrollY;
   hasExitedHero.value = window.scrollY > window.innerHeight * 0.85;
 }
@@ -79,51 +71,32 @@ onUnmounted(() => {
 
     <header class="hero-navbar" :class="{ 
       'hero-navbar--scrolled': hasExitedHero,
-      'hero-navbar--hidden': isMenuOpen || introState !== 'ready'
+      'hero-navbar--hidden': introState !== 'ready'
     }">
       <div class="hero-brand" :class="{ 'hero-brand--visible': hasExitedHero }">
         {{ company?.name || 'Calzado Moderno' }}
       </div>
       
       <div class="hero-nav-actions">
-        <button class="nav-theme-btn">
-          (OSCURO)
-        </button>
-        <button class="nav-menu-btn" @click="toggleMenu">
-          <div class="hamburger">
-            <span class="line"></span>
-            <span class="line"></span>
-            <span class="line"></span>
-          </div>
-          MENÚ
+        <button @click="toggle" class="nav-theme-btn" aria-label="Alternar tema">
+          <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="theme-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="theme-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
         </button>
       </div>
     </header>
 
-    <div class="menu-overlay" :class="{ 'menu-overlay--open': isMenuOpen }">
-      <div class="menu-overlay-bg"></div>
-      <div class="menu-content">
-        <button class="menu-close-btn" @click="toggleMenu">&times; CERRAR</button>
-        <nav class="menu-links">
-          <a href="#inicio" @click="toggleMenu">INICIO</a>
-          <a href="#productos" @click="toggleMenu">PRODUCTOS</a>
-          <a href="#nosotros" @click="toggleMenu">NOSOTROS</a>
-          <a href="#contacto" @click="toggleMenu">CONTACTO</a>
-        </nav>
-      </div>
-    </div>
-
     <div class="hero-frame-wrapper">
       <div 
         class="modern-hero-container" 
-        :class="[
-          `modern-hero-container--${introState}`,
-          { 'modern-hero-container--menu-open': isMenuOpen }
-        ]"
+        :class="[`modern-hero-container--${introState}`]"
       >
         <div class="pill-loader-progress" v-if="introState === 'loading' || introState === 'expanding'" :style="{ width: loadingProgress + '%' }"></div>
 
-        <div class="hero-content" :class="{ 'hero-content--menu-open': isMenuOpen }">
+        <div class="hero-content">
           <div 
             class="hero-bg" 
             :class="`hero-bg--${introState}`" 
@@ -262,13 +235,6 @@ onUnmounted(() => {
   will-change: opacity, transform;
 }
 
-.hero-content--menu-open {
-  transform: scale(0.92) translateY(3vh);
-  opacity: 0.5;
-  filter: blur(4px);
-  pointer-events: none;
-}
-
 /* Base image */
 .hero-bg {
   position: absolute;
@@ -371,7 +337,7 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.nav-theme-btn, .nav-menu-btn {
+.nav-theme-btn {
   background: transparent;
   border: none;
   color: #fff;
@@ -387,120 +353,17 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
-.hamburger {
-  width: 18px;
-  height: 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+.theme-icon {
+  width: 24px;
+  height: 24px;
 }
 
-.line {
-  display: block;
-  width: 100%;
-  height: 2px;
-  background-color: currentColor;
-  border-radius: 2px;
-}
-
-.hero-navbar--scrolled .nav-theme-btn, 
-.hero-navbar--scrolled .nav-menu-btn {
+.hero-navbar--scrolled .nav-theme-btn {
   color: var(--color-text);
 }
 
-.nav-theme-btn:hover, .nav-menu-btn:hover {
+.nav-theme-btn:hover {
   opacity: 0.7;
-}
-
-/* --- Menu Overlay Styles --- */
-.menu-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.menu-overlay--open {
-  pointer-events: auto;
-}
-
-.menu-overlay-bg {
-  position: absolute;
-  inset: 0;
-  background-color: var(--color-bg);
-  opacity: 0;
-  transition: opacity 0.6s cubic-bezier(0.76, 0, 0.24, 1);
-}
-.menu-overlay--open .menu-overlay-bg {
-  opacity: 0.95;
-}
-
-.menu-content {
-  position: relative;
-  z-index: 95;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.menu-close-btn {
-  background: none;
-  border: none;
-  color: var(--color-text);
-  font-family: 'Inter', sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 4rem;
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: all 0.6s cubic-bezier(0.76, 0, 0.24, 1);
-}
-.menu-overlay--open .menu-close-btn {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 0.2s;
-}
-
-.menu-links {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-.menu-links a {
-  text-decoration: none;
-  color: var(--color-text);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 4rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-  opacity: 0;
-  transform: translateY(40px);
-  transition: all 0.6s cubic-bezier(0.76, 0, 0.24, 1);
-}
-.menu-overlay--open .menu-links a {
-  opacity: 1;
-  transform: translateY(0);
-}
-.menu-overlay--open .menu-links a:nth-child(1) { transition-delay: 0.1s; }
-.menu-overlay--open .menu-links a:nth-child(2) { transition-delay: 0.15s; }
-.menu-overlay--open .menu-links a:nth-child(3) { transition-delay: 0.2s; }
-.menu-overlay--open .menu-links a:nth-child(4) { transition-delay: 0.25s; }
-
-.menu-links a:hover {
-  color: #e81c4f;
-}
-
-/* ——— Hamburger Icon Animation (optional) ——— */
-.hero-navbar--hidden .hamburger .line:first-child {
-  transform: rotate(45deg);
-}
-.hero-navbar--hidden .hamburger .line:last-child {
-  transform: rotate(-45deg);
 }
 
 /* ——— Main Content ——— */
@@ -520,7 +383,8 @@ onUnmounted(() => {
   left: 3rem;
   transform: translate(0, 0) scale(1);
   transform-origin: top left;
-  color: #f6f4f0;
+  color: #ffffff;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
   text-align: left;
   white-space: nowrap;
   
@@ -546,7 +410,8 @@ onUnmounted(() => {
   font-weight: 400;
   line-height: 1.6;
   letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
   max-width: 480px;
 }
 
