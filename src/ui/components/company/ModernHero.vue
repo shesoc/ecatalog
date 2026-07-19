@@ -594,21 +594,46 @@ onUnmounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .hero-bottom-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2rem;
+  .modern-hero-container {
+    border-radius: 40px;
   }
-  .hero-bottom-right {
+  .hero-title {
+    top: 2rem;
+    left: 1.5rem;
+    font-size: clamp(2.5rem, 12vw, 3.5rem);
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .hero-bottom-bar {
+    bottom: 2rem;
+    left: 1.5rem;
+    right: 1.5rem;
     flex-direction: column;
     align-items: flex-start;
     gap: 1.5rem;
   }
-  .hero-navbar {
-    padding: 1.5rem;
+  .hero-bottom-right {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    width: 100%;
   }
-  .hero-text-wrapper {
-    padding: 1.5rem;
+  .hero-buttons {
+    width: 100%;
+    flex-direction: column;
+  }
+  .btn-primary, .btn-outline {
+    width: 100%;
+    padding: 1rem;
+  }
+  .hero-scroll-indicator {
+    display: none;
+  }
+  .hero-navbar {
+    top: 0.5rem;
+    left: 1.5rem;
+    width: calc(100% - 3rem);
+    padding: 1rem 1.5rem;
   }
 }
 </style>

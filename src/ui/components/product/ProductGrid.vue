@@ -26,65 +26,27 @@ const categories = computed(() => {
 });
 
 const activeCategory = ref('Todos');
+const isCategoriesOpen = ref(true);
 
 // ——— Price range filter ———
-interface PriceRange {
-  label: string;
-  min: number;
-  max: number;
-}
-
-const priceRanges = computed<PriceRange[]>(() => {
-  if (props.products.length === 0) return [];
-
-  const prices = props.products.map((p) => p.price);
-  const maxPrice = Math.max(...prices);
-
-  const ranges: PriceRange[] = [];
-
-  if (maxPrice <= 100) {
-    ranges.push(
-      { label: '$0 – $25', min: 0, max: 25 },
-      { label: '$25 – $50', min: 25, max: 50 },
-      { label: '$50 – $100', min: 50, max: 100 },
-    );
-  } else if (maxPrice <= 500) {
-    ranges.push(
-      { label: '$0 – $50', min: 0, max: 50 },
-      { label: '$50 – $100', min: 50, max: 100 },
-      { label: '$100 – $200', min: 100, max: 200 },
-      { label: '$200 – $500', min: 200, max: 500 },
-    );
-  } else if (maxPrice <= 1000) {
-    ranges.push(
-      { label: '$0 – $100', min: 0, max: 100 },
-      { label: '$100 – $250', min: 100, max: 250 },
-      { label: '$250 – $500', min: 250, max: 500 },
-      { label: '$500 – $1,000', min: 500, max: 1000 },
-    );
-  } else {
-    ranges.push(
-      { label: '$0 – $100', min: 0, max: 100 },
-      { label: '$100 – $500', min: 100, max: 500 },
-      { label: '$500 – $1,000', min: 500, max: 1000 },
-      { label: 'Más de $1,000', min: 1000, max: Infinity },
-    );
-  }
-
-  return ranges.filter((r) =>
-    props.products.some((p) => p.price >= r.min && (r.max === Infinity ? true : p.price < r.max)),
-  );
+const maxPriceGlobal = computed(() => {
+  if (props.products.length === 0) return 500;
+  return Math.max(...props.products.map(p => p.price));
 });
 
-const activePriceRange = ref<PriceRange | null>(null);
+const currentMaxPrice = ref<number>(500);
+
+watch(maxPriceGlobal, (newMax) => {
+  currentMaxPrice.value = newMax;
+}, { immediate: true });
 
 const hasActiveFilters = computed(() =>
-  activeCategory.value !== 'Todos' || activePriceRange.value !== null || searchQuery.value.trim() !== ''
+  activeCategory.value !== 'Todos' || currentMaxPrice.value < maxPriceGlobal.value || searchQuery.value.trim() !== ''
 );
 
 function clearFilters(): void {
   activeCategory.value = 'Todos';
-  activePriceRange.value = null;
+  currentMaxPrice.value = maxPriceGlobal.value;
   searchQuery.value = '';
 }
 
@@ -107,9 +69,8 @@ const filteredProducts = computed(() => {
       ? [...props.products]
       : props.products.filter((p) => p.category === activeCategory.value);
 
-  if (activePriceRange.value) {
-    const { min, max } = activePriceRange.value;
-    list = list.filter((p) => p.price >= min && (max === Infinity ? true : p.price < max));
+  if (currentMaxPrice.value < maxPriceGlobal.value) {
+    list = list.filter((p) => p.price <= currentMaxPrice.value);
   }
 
   const q = searchQuery.value.trim().toLowerCase();
@@ -145,7 +106,7 @@ const paginatedProducts = computed(() => {
   return filteredProducts.value.slice(start, start + pageSize.value);
 });
 
-watch([activeCategory, activePriceRange, searchQuery, sortOrder], () => {
+watch([activeCategory, currentMaxPrice, searchQuery, sortOrder], () => {
   currentPage.value = 1;
   pageSize.value = pageSizeOptions.value[0];
 });
@@ -163,7 +124,7 @@ watch(pageSizeOptions, (options) => {
           <h2 class="catalog-title">Catálogo de Productos</h2>
           <div class="catalog-actions">
           <span class="catalog-count">{{ filteredProducts.length }} productos</span>
-          <button class="filter-toggle-btn" @click="showSidebar = true">
+          <button class="filter-toggle-btn mobile-only-btn" @click="showSidebar = true">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
             </svg>
@@ -174,85 +135,93 @@ watch(pageSizeOptions, (options) => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <!-- Sidebar Overlay -->
+    <div class="catalog-layout">
+      <!-- Sidebar Overlay (Mobile) -->
       <Transition name="fade">
-        <div v-if="showSidebar" class="sidebar-overlay" @click="showSidebar = false"></div>
+        <div v-if="showSidebar" class="sidebar-overlay mobile-only" @click="showSidebar = false"></div>
       </Transition>
 
       <!-- Sidebar Panel -->
-      <Transition name="slide-left">
-        <aside v-if="showSidebar" class="filter-sidebar">
-          <div class="sidebar-header">
-            <h3>Filtros de Búsqueda</h3>
-            <button class="close-btn" @click="showSidebar = false" aria-label="Cerrar filtros">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      <aside class="filter-sidebar" :class="{ 'is-open': showSidebar }">
+        <div class="sidebar-header mobile-only">
+          <h3>Filtros de Búsqueda</h3>
+          <button class="close-btn" @click="showSidebar = false" aria-label="Cerrar filtros">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-body">
+          <div class="sidebar-section">
+            <input v-model="searchQuery" type="search" class="sidebar-search" placeholder="Buscar productos..." />
+          </div>
+
+          <div class="sidebar-section">
+            <h4>Ordenar por</h4>
+            <div class="sidebar-options">
+              <button v-for="opt in sortOptions" :key="opt.value" class="sidebar-opt-btn" :class="{'active': sortOrder === opt.value}" @click="sortOrder = opt.value">
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <button class="accordion-header" @click="isCategoriesOpen = !isCategoriesOpen">
+              <h4>Categorías</h4>
+              <svg :class="{ 'is-open': isCategoriesOpen }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
               </svg>
             </button>
-          </div>
-
-          <div class="sidebar-body">
-            <div class="sidebar-section">
-              <input v-model="searchQuery" type="search" class="sidebar-search" placeholder="Buscar productos..." />
-            </div>
-
-            <div class="sidebar-section">
-              <h4>Ordenar por</h4>
-              <div class="sidebar-options">
-                <button v-for="opt in sortOptions" :key="opt.value" class="sidebar-opt-btn" :class="{'active': sortOrder === opt.value}" @click="sortOrder = opt.value">
-                  {{ opt.label }}
-                </button>
-              </div>
-            </div>
-
-            <div class="sidebar-section">
-              <h4>Categorías</h4>
-              <div class="sidebar-options">
-                <button class="sidebar-opt-btn" :class="{'active': activeCategory === 'Todos'}" @click="activeCategory = 'Todos'">Todas</button>
-                <button v-for="cat in categories" :key="cat" class="sidebar-opt-btn" :class="{'active': activeCategory === cat}" @click="activeCategory = cat">{{ cat }}</button>
-              </div>
-            </div>
-
-            <div class="sidebar-section">
-              <h4>Rango de Precio</h4>
-              <div class="sidebar-options">
-                <button class="sidebar-opt-btn" :class="{'active': activePriceRange === null}" @click="activePriceRange = null">Todos los precios</button>
-                <button v-for="range in priceRanges" :key="range.label" class="sidebar-opt-btn" :class="{'active': activePriceRange?.label === range.label}" @click="activePriceRange = range">{{ range.label }}</button>
-              </div>
+            <div class="sidebar-options" v-show="isCategoriesOpen">
+              <button class="sidebar-opt-btn" :class="{'active': activeCategory === 'Todos'}" @click="activeCategory = 'Todos'">Todas</button>
+              <button v-for="cat in categories" :key="cat" class="sidebar-opt-btn" :class="{'active': activeCategory === cat}" @click="activeCategory = cat">{{ cat }}</button>
             </div>
           </div>
 
-          <div class="sidebar-footer" v-if="hasActiveFilters">
-            <button class="btn-clear" @click="clearFilters">Limpiar todos los filtros</button>
+          <div class="sidebar-section">
+            <h4>Rango de Precio</h4>
+            <div class="price-slider-container">
+              <input type="range" class="custom-range" :min="0" :max="maxPriceGlobal" v-model.number="currentMaxPrice" />
+              <div class="price-labels">
+                <span>$0</span>
+                <span>${{ currentMaxPrice }}</span>
+              </div>
+            </div>
           </div>
-        </aside>
-      </Transition>
-    </Teleport>
+        </div>
 
-    <!-- Grid -->
-    <div class="product-grid">
-      <ProductCard
-        v-for="product in paginatedProducts"
-        :key="product.id"
-        :product="product"
-        @select="emit('selectProduct', $event)"
-      />
-    </div>
+        <div class="sidebar-footer" v-if="hasActiveFilters">
+          <button class="btn-clear" @click="clearFilters">Limpiar todos los filtros</button>
+        </div>
+      </aside>
 
-    <p v-if="filteredProducts.length === 0" class="empty-state">
-      {{ searchQuery.trim() ? `Sin resultados para "${searchQuery.trim()}"` : 'No hay productos con los filtros seleccionados.' }}
-    </p>
+      <!-- Main Grid Area -->
+      <div class="catalog-main-content">
+        <div class="product-grid">
+          <ProductCard
+            v-for="product in paginatedProducts"
+            :key="product.id"
+            :product="product"
+            @select="emit('selectProduct', $event)"
+          />
+        </div>
 
-    <ProductPagination
-      v-if="filteredProducts.length > 0"
-      :total="filteredProducts.length"
-      :current-page="currentPage"
-      :page-size="pageSize"
-      :page-size-options="pageSizeOptions"
-      @update:current-page="currentPage = $event"
-      @update:page-size="pageSize = $event"
-    />
+        <p v-if="filteredProducts.length === 0" class="empty-state">
+          {{ searchQuery.trim() ? `Sin resultados para "${searchQuery.trim()}"` : 'No hay productos con los filtros seleccionados.' }}
+        </p>
+
+        <ProductPagination
+          v-if="filteredProducts.length > 0"
+          :total="filteredProducts.length"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :page-size-options="pageSizeOptions"
+          @update:current-page="currentPage = $event"
+          @update:page-size="pageSize = $event"
+        />
+      </div>
+    </div> <!-- /catalog-layout -->
     </div> <!-- /catalog-container -->
   </section>
 </template>
@@ -343,13 +312,37 @@ watch(pageSizeOptions, (options) => {
   border: 2px solid var(--color-bg);
 }
 
-/* ——— Sidebar ——— */
+/* ——— Layout & Sidebar ——— */
+.catalog-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-only-btn {
+  display: inline-flex;
+}
+.mobile-only {
+  display: flex;
+}
+
+@media (min-width: 1024px) {
+  .catalog-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  .mobile-only-btn {
+    display: none !important;
+  }
+  .mobile-only {
+    display: none !important;
+  }
+}
+
 .sidebar-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   z-index: 100;
@@ -360,7 +353,7 @@ watch(pageSizeOptions, (options) => {
   top: 0;
   left: 0;
   width: 100%;
-  max-width: 380px;
+  max-width: 320px;
   height: 100vh;
   background: var(--color-surface);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
@@ -368,10 +361,35 @@ watch(pageSizeOptions, (options) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-sidebar.is-open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .filter-sidebar {
+    position: sticky;
+    top: calc(var(--header-height, 80px) + 2rem);
+    height: max-content;
+    max-height: calc(100vh - var(--header-height, 80px) - 2rem);
+    transform: none;
+    box-shadow: none;
+    z-index: 10;
+    max-width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+  .sidebar-overlay {
+    display: none;
+  }
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
@@ -379,7 +397,7 @@ watch(pageSizeOptions, (options) => {
 }
 
 .sidebar-header h3 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
@@ -390,7 +408,7 @@ watch(pageSizeOptions, (options) => {
   border: none;
   color: var(--color-text-subtle);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.4rem;
   border-radius: 50%;
   display: flex;
   transition: background 0.2s;
@@ -400,31 +418,56 @@ watch(pageSizeOptions, (options) => {
   color: var(--color-text);
 }
 .close-btn svg {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .sidebar-body {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .sidebar-section h4 {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-text-subtle);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+  line-height: 1.5;
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+.accordion-header h4 {
+  margin-bottom: 0;
+}
+.accordion-header svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-subtle);
+  transition: transform 0.2s ease;
+}
+.accordion-header svg.is-open {
+  transform: rotate(180deg);
 }
 
 .sidebar-search {
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.6rem 0.85rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg);
@@ -439,17 +482,19 @@ watch(pageSizeOptions, (options) => {
 .sidebar-options {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .sidebar-opt-btn {
   text-align: left;
-  padding: 0.6rem 1rem;
+  padding: 0.45rem 0.85rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
   color: var(--color-text);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -465,14 +510,50 @@ watch(pageSizeOptions, (options) => {
   border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
+.price-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
+}
+
+.custom-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  outline: none;
+}
+
+.custom-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.price-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+
 .sidebar-footer {
-  padding: 1.5rem;
+  padding: 1rem 1.25rem;
   border-top: 1px solid var(--color-border);
 }
 
 .btn-clear {
   width: 100%;
-  padding: 0.8rem;
+  padding: 0.65rem;
   border-radius: var(--radius-full);
   background: transparent;
   border: 1px solid var(--color-border);
@@ -488,11 +569,6 @@ watch(pageSizeOptions, (options) => {
 }
 
 /* Transitions */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-
-.slide-left-enter-active, .slide-left-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.slide-left-enter-from, .slide-left-leave-to { transform: translateX(-100%); }
 
 /* ——— Product Grid ——— */
 .product-grid {
@@ -526,7 +602,7 @@ watch(pageSizeOptions, (options) => {
 
 @media (min-width: 1024px) {
   .product-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
   }
 }
